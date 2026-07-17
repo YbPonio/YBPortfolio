@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { getPortfolioHTML, renderPortfolioHTMLToCanvas } from './portfolio-html.js';
 
 let scene, camera, renderer, controls;
 let monitorMeshGroup, screenGroup, standGroup, displayMesh;
@@ -17,6 +18,7 @@ let dragOccurred = false;
 let mouseDownTime = 0;
 let loaderTimer = null;
 let currentProgress = 0;
+let overlayEl = null;
 
 let transitionStartTime = 0;
 let startCamPos = new THREE.Vector3();
@@ -42,7 +44,12 @@ export function init3DMonitorShowcase(containerEl) {
   renderer.setClearColor(0xffffff, 0); // Transparent background
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
+  
+  // Clear container and add renderer canvas
   containerEl.replaceChildren(renderer.domElement);
+
+  // Initialize Interactive Screen Overlay
+  createInteractiveOverlay(containerEl);
 
   // 4. Studio Lighting
   const ambientLight = new THREE.AmbientLight(0xffffff, 2.2);
@@ -93,7 +100,7 @@ export function init3DMonitorShowcase(containerEl) {
   });
 
   renderer.domElement.addEventListener('pointerup', (e) => {
-    if (dragOccurred || isAnimatingTransition) return;
+    if (dragOccurred || isAnimatingTransition || isExpanded) return;
 
     const rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -103,6 +110,13 @@ export function init3DMonitorShowcase(containerEl) {
     const intersects = raycaster.intersectObjects(monitorMeshGroup.children, true);
 
     if (intersects.length > 0 || !isExpanded) {
+      triggerScreenMeshExpansion();
+    }
+  });
+
+  // ESC Key listener to exit full screen view
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isExpanded && !isAnimatingTransition) {
       triggerScreenMeshExpansion();
     }
   });
@@ -152,7 +166,8 @@ export function init3DMonitorShowcase(containerEl) {
         isAnimatingTransition = false;
 
         if (isExpanded) {
-          startBootLoaderSequence();
+          showInteractiveOverlay();
+          // startBootLoaderSequence();
         }
       }
     }
@@ -162,6 +177,90 @@ export function init3DMonitorShowcase(containerEl) {
 
   animate();
 }
+
+/**
+ * Create Interactive HTML Screen Overlay over 3D Canvas
+ */
+function createInteractiveOverlay(containerEl) {
+  overlayEl = document.createElement('div');
+  overlayEl.id = 'monitor-interactive-screen-overlay';
+  overlayEl.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 opacity-0 pointer-events-none transition-all duration-500 ease-out bg-slate-950/60 backdrop-blur-md';
+
+  overlayEl.innerHTML = `
+    <div class="relative w-full max-w-5xl max-h-[85vh] h-[720px] rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white flex flex-col">
+      <!-- Overlay Header Controls -->
+      <div class="bg-gray-900 border-b border-gray-800 px-4 py-2.5 flex items-center justify-between shrink-0 select-none z-10 text-white">
+        <div class="flex items-center gap-3">
+          <button id="close-overlay-btn" class="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-100 border border-gray-700 transition-colors">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Exit 3D Screen Mode (ESC)
+          </button>
+          <span class="text-xs font-mono text-gray-400 hidden sm:inline">ybponio • interactive portfolio view</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">INTERACTIVE VIEW</span>
+        </div>
+      </div>
+      
+      <!-- Scrollable Portfolio HTML Container -->
+      <div id="overlay-portfolio-content" class="flex-1 overflow-y-auto bg-white">
+        ${getPortfolioHTML()}
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlayEl);
+
+  // Close button event listener
+  const closeBtn = overlayEl.querySelector('#close-overlay-btn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (isExpanded && !isAnimatingTransition) {
+        triggerScreenMeshExpansion();
+      }
+    });
+  }
+
+  // Setup Global Navigation & Form Handlers
+  window.scrollToSection = (sectionId) => {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  window.handleContactSubmit = (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) {
+      const origText = btn.innerHTML;
+      btn.innerHTML = `<span class="text-emerald-400 font-bold">✓ Dispatch Message Sent to Ycker Ponio!</span>`;
+      btn.disabled = true;
+      setTimeout(() => {
+        btn.innerHTML = origText;
+        btn.disabled = false;
+        form.reset();
+      }, 3000);
+    }
+  };
+}
+
+function showInteractiveOverlay() {
+  if (overlayEl) {
+    overlayEl.classList.remove('opacity-0', 'pointer-events-none');
+    overlayEl.classList.add('opacity-100', 'pointer-events-auto');
+  }
+}
+
+function hideInteractiveOverlay() {
+  if (overlayEl) {
+    overlayEl.classList.remove('opacity-100', 'pointer-events-auto');
+    overlayEl.classList.add('opacity-0', 'pointer-events-none');
+  }
+}
+
 
 /**
  * ---------------------------------------------------------
@@ -180,35 +279,7 @@ function initRenderToTexture() {
   screenCanvasTexture.magFilter = THREE.LinearFilter;
   screenCanvasTexture.generateMipmaps = false;
 
-  drawDefaultScreenTexture();
-}
-
-/**
- * Draw Glossy Default Off-Screen State on 3D Monitor
- */
-function drawDefaultScreenTexture() {
-  if (!rttContext) return;
-  const w = rttCanvas.width;
-  const h = rttCanvas.height;
-
-  rttContext.fillStyle = '#060911';
-  rttContext.fillRect(0, 0, w, h);
-
-  // Subtle glass reflection glow
-  const gradient = rttContext.createLinearGradient(0, 0, w, h);
-  gradient.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
-  gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.0)');
-  gradient.addColorStop(1, 'rgba(255, 255, 255, 0.02)');
-  rttContext.fillStyle = gradient;
-  rttContext.fillRect(0, 0, w, h);
-
-  // Power status dot on texture
-  rttContext.fillStyle = '#38bdf8';
-  rttContext.beginPath();
-  rttContext.arc(w - 40, h - 35, 6, 0, Math.PI * 2);
-  rttContext.fill();
-
-  screenCanvasTexture.needsUpdate = true;
+  drawHeroBannerTexture();
 }
 
 /**
@@ -277,54 +348,6 @@ function drawBootLoaderTexture(progress, logText) {
   rttContext.fillText('PLEASE WAIT • SYNCHRONIZING REALTIME DATASETS', centerX, barY + 55);
 
   // 4. Bottom Footer Bar
-  drawBottomFooterBar();
-
-  screenCanvasTexture.needsUpdate = true;
-}
-
-/**
- * Draw Light & Modern Hero Banner Layout Directly on 3D Monitor Screen Texture
- */
-function drawHeroBannerTexture() {
-  if (!rttContext) return;
-  const w = rttCanvas.width;
-  const h = rttCanvas.height;
-
-  // Background - Light Modern Theme
-  rttContext.fillStyle = '#f8fafc';
-  rttContext.fillRect(0, 0, w, h);
-
-  // 1. Top Navigation Bar
-  drawTopWindowBar('ONLINE • PORTFOLIO ACTIVE');
-
-  const centerX = w / 2;
-
-  // 2. Showcase Category Pill (Zero Emojis!)
-  drawPillBadge('PERSONAL PORTFOLIO SHOWCASE', centerX, 150, '#f1f5f9', '#475569');
-
-  // 3. Name Heading
-  rttContext.fillStyle = '#191919';
-  rttContext.font = '800 52px Inter, sans-serif';
-  rttContext.textAlign = 'center';
-  rttContext.fillText('Ycker Ponio', centerX, 225);
-
-  // 4. Minimalist Role Badges (Zero Emojis!)
-  const badgeY = 275;
-  const badges = ['BSIT Student', 'Web Developer', 'IT Support Technician'];
-  drawBadgeGroup(badges, centerX, badgeY);
-
-  // 5. Bio Summary Paragraph
-  rttContext.fillStyle = '#191919';
-  rttContext.font = '800 18px Inter, sans-serif';
-  rttContext.textAlign = 'center';
-  rttContext.fillText('Building full-stack web architectures, WebGL 3D model showcases,', centerX, 360);
-  rttContext.fillText('and IT support operations. Welcome to your 3D interactive hero workspace.', centerX, 388);
-
-  // 6. Action CTA Buttons
-  drawCTAButton('Initiate Contact', centerX - 110, 440, '#0f172a', '#ffffff');
-  drawCTAButton('View System Specs', centerX + 110, 440, '#ffffff', '#0f172a', '#cbd5e1');
-
-  // 7. Bottom Footer Bar
   drawBottomFooterBar();
 
   screenCanvasTexture.needsUpdate = true;
@@ -413,63 +436,6 @@ function drawPillBadge(text, centerX, y, bgColor, textColor) {
 }
 
 /**
- * Helper: Draw Role Badge Pills Group
- */
-function drawBadgeGroup(badgeList, centerX, y) {
-  rttContext.font = '500 14px Inter, sans-serif';
-  let totalW = 0;
-  const padding = 24;
-  const widths = badgeList.map((text) => rttContext.measureText(text).width + padding);
-  totalW = widths.reduce((a, b) => a + b, 0) + (badgeList.length - 1) * 12;
-
-  let currentX = centerX - totalW / 2;
-
-  badgeList.forEach((text, i) => {
-    const badgeW = widths[i];
-    const badgeH = 34;
-
-    rttContext.fillStyle = '#ffffff';
-    drawRoundedRect(rttContext, currentX, y, badgeW, badgeH, 17);
-    rttContext.fill();
-
-    rttContext.strokeStyle = '#e2e8f0';
-    rttContext.lineWidth = 1;
-    rttContext.stroke();
-
-    rttContext.fillStyle = i === 1 ? '#0f172a' : '#475569';
-    rttContext.font = i === 1 ? '700 14px Inter, sans-serif' : '500 14px Inter, sans-serif';
-    rttContext.textAlign = 'center';
-    rttContext.fillText(text, currentX + badgeW / 2, y + 22);
-
-    currentX += badgeW + 12;
-  });
-}
-
-/**
- * Helper: Draw Action CTA Button
- */
-function drawCTAButton(text, centerX, y, bgColor, textColor, borderColor = null) {
-  rttContext.font = '700 14px Inter, sans-serif';
-  const buttonW = 180;
-  const buttonH = 44;
-  const buttonX = centerX - buttonW / 2;
-
-  rttContext.fillStyle = bgColor;
-  drawRoundedRect(rttContext, buttonX, y, buttonW, buttonH, 10);
-  rttContext.fill();
-
-  if (borderColor) {
-    rttContext.strokeStyle = borderColor;
-    rttContext.lineWidth = 1.5;
-    rttContext.stroke();
-  }
-
-  rttContext.fillStyle = textColor;
-  rttContext.textAlign = 'center';
-  rttContext.fillText(text, centerX, y + 27);
-}
-
-/**
  * Helper: Draw Rounded Rect Path
  */
 function drawRoundedRect(ctx, x, y, width, height, radius) {
@@ -484,6 +450,18 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.lineTo(x, y + radius);
   ctx.quadraticCurveTo(x, y, x + radius, y);
   ctx.closePath();
+}
+
+/**
+ * Draw Portfolio HTML directly onto 3D Monitor Screen Texture
+ */
+function drawHeroBannerTexture() {
+  if (!rttContext || !rttCanvas) return;
+  renderPortfolioHTMLToCanvas(rttContext, rttCanvas.width, rttCanvas.height, () => {
+    if (screenCanvasTexture) {
+      screenCanvasTexture.needsUpdate = true;
+    }
+  });
 }
 
 /**
@@ -512,7 +490,7 @@ function startBootLoaderSequence() {
 
       drawBootLoaderTexture(100, logs[4]);
 
-      // Unveil Hero Banner Texture after boot loader completes
+      // Unveil Hero Portfolio HTML Texture after boot loader completes
       setTimeout(() => {
         drawHeroBannerTexture();
       }, 250);
@@ -541,7 +519,8 @@ function triggerScreenMeshExpansion() {
 
   if (!isExpanded) {
     if (loaderTimer) clearInterval(loaderTimer);
-    drawDefaultScreenTexture();
+    hideInteractiveOverlay();
+    drawHeroBannerTexture();
   }
 }
 
