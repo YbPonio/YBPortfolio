@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { getPortfolioHTML, renderPortfolioHTMLToCanvas } from './portfolio-html.js';
+import { getPortfolioHTML, renderPortfolioHTMLToCanvas, initPortfolioInteractivity, isScreenButtonClick } from './portfolio-html.js';
 
 let scene, camera, renderer, controls;
 let monitorMeshGroup, screenGroup, standGroup, displayMesh;
@@ -28,8 +28,9 @@ let startRot = new THREE.Euler();
 export function init3DMonitorShowcase(containerEl) {
   if (!containerEl) return;
 
-  // 1. Scene setup
+  // 1. Scene setup (Pure White Studio Environment)
   scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xffffff);
 
   // 2. Camera setup - Calibrated for initial ~300px model width
   const width = containerEl.clientWidth || window.innerWidth;
@@ -38,10 +39,10 @@ export function init3DMonitorShowcase(containerEl) {
   camera.position.set(0, 0.1, 6.8);
 
   // 3. WebGL Renderer
-  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setClearColor(0xffffff, 0); // Transparent background
+  renderer.setClearColor(0xffffff, 1); // Solid white background
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
   
@@ -67,6 +68,32 @@ export function init3DMonitorShowcase(containerEl) {
   topRimLight.position.set(0, 5, 2);
   scene.add(topRimLight);
 
+  // Soft Ground Shadow Ring beneath Monitor Base
+  const shadowGeo = new THREE.PlaneGeometry(3.2, 3.2);
+  const shadowCanvas = document.createElement('canvas');
+  shadowCanvas.width = 256;
+  shadowCanvas.height = 256;
+  const sCtx = shadowCanvas.getContext('2d');
+  const sGrad = sCtx.createRadialGradient(128, 128, 10, 128, 128, 120);
+  sGrad.addColorStop(0, 'rgba(0, 0, 0, 0.22)');
+  sGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.08)');
+  sGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  sCtx.fillStyle = sGrad;
+  sCtx.fillRect(0, 0, 256, 256);
+
+  const shadowTex = new THREE.CanvasTexture(shadowCanvas);
+  const shadowMat = new THREE.MeshBasicMaterial({
+    map: shadowTex,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false
+  });
+  const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
+  shadowMesh.rotation.x = -Math.PI / 2;
+  shadowMesh.position.set(0, -1.15, 0);
+  scene.add(shadowMesh);
+
+
   // 5. Orbit Controls (Mouse Drag rotation allowed, Mouse Zoom disabled)
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
@@ -84,35 +111,62 @@ export function init3DMonitorShowcase(containerEl) {
   scene.add(monitorMeshGroup);
   build3DMonitorMeshParts(monitorMeshGroup);
 
-  // 8. Click & Pointer Raycaster setup
+  // 8. Click & Pointer Raycaster setup (CENTER BUTTON-ONLY EXPANSION)
   raycaster = new THREE.Raycaster();
   mouse = new THREE.Vector2();
+  let pointerDownPos = { x: 0, y: 0 };
+  let currentCursor = 'default';
 
-  renderer.domElement.addEventListener('pointerdown', () => {
-    dragOccurred = false;
-    mouseDownTime = Date.now();
+  renderer.domElement.addEventListener('pointerdown', (e) => {
+    pointerDownPos = { x: e.clientX, y: e.clientY };
   });
 
-  controls.addEventListener('change', () => {
-    if (Date.now() - mouseDownTime > 150) {
-      dragOccurred = true;
+  renderer.domElement.addEventListener('pointermove', (e) => {
+    if (isAnimatingTransition || isExpanded || !displayMesh) {
+      if (currentCursor !== 'default') {
+        currentCursor = 'default';
+        renderer.domElement.style.cursor = 'default';
+      }
+      return;
     }
-  });
-
-  renderer.domElement.addEventListener('pointerup', (e) => {
-    if (dragOccurred || isAnimatingTransition || isExpanded) return;
 
     const rect = renderer.domElement.getBoundingClientRect();
     mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(monitorMeshGroup.children, true);
+    const intersects = raycaster.intersectObject(displayMesh, false);
 
-    if (intersects.length > 0 || !isExpanded) {
+    const isHover = intersects.length > 0 && isScreenButtonClick(intersects[0].uv);
+    const targetCursor = isHover ? 'pointer' : 'default';
+
+    if (currentCursor !== targetCursor) {
+      currentCursor = targetCursor;
+      renderer.domElement.style.cursor = targetCursor;
+    }
+  });
+
+
+  renderer.domElement.addEventListener('pointerup', (e) => {
+    if (isAnimatingTransition || isExpanded || !displayMesh) return;
+
+    // Ignore drag movements > 10px
+    const moveDist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+    if (moveDist > 10) return;
+
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObject(displayMesh, false);
+
+    // Trigger expansion if clicking the center button on displayMesh
+    if (intersects.length > 0 && isScreenButtonClick(intersects[0].uv)) {
       triggerScreenMeshExpansion();
     }
   });
+
 
   // ESC Key listener to exit full screen view
   window.addEventListener('keydown', (e) => {
@@ -120,6 +174,7 @@ export function init3DMonitorShowcase(containerEl) {
       triggerScreenMeshExpansion();
     }
   });
+
 
   // Window Resize Listener
   window.addEventListener('resize', () => {
@@ -137,14 +192,14 @@ export function init3DMonitorShowcase(containerEl) {
 
     if (controls) controls.update();
 
-    // Smooth Camera Transition on Expand / Un-expand
+    // 3D Camera Expansion Zoom Animation
     if (isAnimatingTransition) {
       const targetCamZ = isExpanded ? 2.45 : 6.8;
       const targetCamY = isExpanded ? 0.38 : 0.1;
       const targetFocusY = isExpanded ? 0.38 : 0;
 
       const elapsed = Date.now() - transitionStartTime;
-      const rawProgress = Math.min(elapsed / 600, 1.0);
+      const rawProgress = Math.min(elapsed / 550, 1.0);
       const ease = rawProgress * rawProgress * (3 - 2 * rawProgress);
 
       camera.position.x = startCamPos.x + (0 - startCamPos.x) * ease;
@@ -165,9 +220,9 @@ export function init3DMonitorShowcase(containerEl) {
         monitorMeshGroup.rotation.set(0, 0, 0);
         isAnimatingTransition = false;
 
+        // Reveal Portfolio HTML Showcase ONLY after expanding animation completes
         if (isExpanded) {
           showInteractiveOverlay();
-          // startBootLoaderSequence();
         }
       }
     }
@@ -179,37 +234,43 @@ export function init3DMonitorShowcase(containerEl) {
 }
 
 /**
- * Create Interactive HTML Screen Overlay over 3D Canvas
+ * Create Interactive HTML Screen Overlay framed to match 3D Monitor Screen Border
  */
 function createInteractiveOverlay(containerEl) {
   overlayEl = document.createElement('div');
   overlayEl.id = 'monitor-interactive-screen-overlay';
-  overlayEl.className = 'fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-8 opacity-0 pointer-events-none transition-all duration-500 ease-out bg-slate-950/60 backdrop-blur-md';
+  overlayEl.className = 'fixed inset-0 z-50 flex flex-col items-center justify-center p-2 sm:p-6 opacity-0 pointer-events-none hidden transition-opacity duration-300 ease-out bg-black/75 backdrop-blur-md overflow-hidden';
 
   overlayEl.innerHTML = `
-    <div class="relative w-full max-w-5xl max-h-[85vh] h-[720px] rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white flex flex-col">
-      <!-- Overlay Header Controls -->
-      <div class="bg-gray-900 border-b border-gray-800 px-4 py-2.5 flex items-center justify-between shrink-0 select-none z-10 text-white">
-        <div class="flex items-center gap-3">
-          <button id="close-overlay-btn" class="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-100 border border-gray-700 transition-colors">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Exit 3D Screen Mode (ESC)
-          </button>
-          <span class="text-xs font-mono text-gray-400 hidden sm:inline">ybponio • interactive portfolio view</span>
-        </div>
+    <!-- Expanded Monitor Model Screen Frame Container -->
+    <div class="relative w-[95vw] max-w-[1400px] h-[88vh] max-h-[900px] rounded-2xl border-[10px] sm:border-[12px] border-[#1e293b] bg-[#ffffff] shadow-[0_25px_70px_-15px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden ring-1 ring-slate-700/60">
+      <!-- Monitor Frame Top Bezel Bar -->
+      <div class="bg-[#0f172a] px-4 py-2 flex items-center justify-between shrink-0 select-none text-white border-b border-slate-800">
         <div class="flex items-center gap-2">
-          <span class="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">INTERACTIVE VIEW</span>
+          <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+          <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+          <span class="text-xs font-mono text-slate-400 ml-2 hidden sm:inline">3D Monitor Model Screen Display • Creative Studio Showcase</span>
         </div>
+        <button id="close-overlay-btn" class="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Exit 3D View (ESC)
+        </button>
       </div>
       
-      <!-- Scrollable Portfolio HTML Container -->
-      <div id="overlay-portfolio-content" class="flex-1 overflow-y-auto bg-white">
+      <!-- Full-Screen Interactive Showcase Page Container inside Monitor Border -->
+      <div id="overlay-portfolio-content" class="flex-1 w-full h-full overflow-hidden bg-[#ffffff] relative">
         ${getPortfolioHTML()}
       </div>
     </div>
   `;
 
   document.body.appendChild(overlayEl);
+
+  const contentEl = overlayEl.querySelector('#overlay-portfolio-content');
+  if (contentEl) {
+    initPortfolioInteractivity(contentEl);
+  }
 
   // Close button event listener
   const closeBtn = overlayEl.querySelector('#close-overlay-btn');
@@ -221,45 +282,29 @@ function createInteractiveOverlay(containerEl) {
       }
     });
   }
-
-  // Setup Global Navigation & Form Handlers
-  window.scrollToSection = (sectionId) => {
-    const el = document.getElementById(sectionId);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
-  window.handleContactSubmit = (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const btn = form.querySelector('button[type="submit"]');
-    if (btn) {
-      const origText = btn.innerHTML;
-      btn.innerHTML = `<span class="text-emerald-400 font-bold">✓ Dispatch Message Sent to Ycker Ponio!</span>`;
-      btn.disabled = true;
-      setTimeout(() => {
-        btn.innerHTML = origText;
-        btn.disabled = false;
-        form.reset();
-      }, 3000);
-    }
-  };
 }
 
 function showInteractiveOverlay() {
   if (overlayEl) {
-    overlayEl.classList.remove('opacity-0', 'pointer-events-none');
-    overlayEl.classList.add('opacity-100', 'pointer-events-auto');
+    const contentEl = overlayEl.querySelector('#overlay-portfolio-content');
+    if (contentEl) {
+      contentEl.innerHTML = getPortfolioHTML();
+      initPortfolioInteractivity(contentEl);
+    }
+    overlayEl.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+    overlayEl.classList.add('flex', 'opacity-100', 'pointer-events-auto');
   }
 }
 
 function hideInteractiveOverlay() {
   if (overlayEl) {
-    overlayEl.classList.remove('opacity-100', 'pointer-events-auto');
-    overlayEl.classList.add('opacity-0', 'pointer-events-none');
+    overlayEl.classList.remove('flex', 'opacity-100', 'pointer-events-auto');
+    overlayEl.classList.add('hidden', 'opacity-0', 'pointer-events-none');
   }
 }
+
+
+
 
 
 /**
@@ -518,11 +563,12 @@ function triggerScreenMeshExpansion() {
   }
 
   if (!isExpanded) {
-    if (loaderTimer) clearInterval(loaderTimer);
     hideInteractiveOverlay();
     drawHeroBannerTexture();
   }
 }
+
+
 
 /**
  * Build 3D Monitor Mesh Parts with RTT Material Mapping
