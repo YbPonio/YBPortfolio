@@ -3,8 +3,8 @@
  * Designed for 3D Monitor Model Screen Display & Expanded Interactive View
  */
 
-import myImgUrl from '../images/IMG_20260721_001852.jpg';
-import layerImgUrl from '../images/IMG_20260721_001907.png';
+import myImgUrl from '../images/img2.png';
+import layerImgUrl from '../images/img1.png';
 
 export function getPortfolioHTML() {
   return `
@@ -236,7 +236,7 @@ export function getPortfolioHTML() {
       <main class="hero">
         <!-- Big text behind image -->
         <div class="hero-big-text creator-text-animate">
-          <h2>Visuals</h2>
+          <h2>YBPONIO</h2>
         </div>
 
         <!-- Base image using src/images/IMG_20260721_001852.jpg -->
@@ -311,7 +311,7 @@ export function initPortfolioInteractivity(rootEl) {
   }
 
   // 3. Spotlight reveal effect (.3 smaller: 260 * 0.7 = 182)
-  const SPOTLIGHT_R = 182;
+  const SPOTLIGHT_R = 100;
   const imgLayer = rootEl.querySelector('#reveal-img');
 
   if (imgLayer) {

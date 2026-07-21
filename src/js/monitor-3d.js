@@ -233,35 +233,50 @@ export function init3DMonitorShowcase(containerEl) {
   animate();
 }
 
+let expandLoaderTimeout = null;
+
 /**
- * Create Interactive HTML Screen Overlay framed to match 3D Monitor Screen Border
+ * Create Interactive HTML Screen Overlay taking full screen display
  */
 function createInteractiveOverlay(containerEl) {
   overlayEl = document.createElement('div');
   overlayEl.id = 'monitor-interactive-screen-overlay';
-  overlayEl.className = 'fixed inset-0 z-50 flex flex-col items-center justify-center p-2 sm:p-6 opacity-0 pointer-events-none hidden transition-opacity duration-300 ease-out bg-black/75 backdrop-blur-md overflow-hidden';
+  overlayEl.className = 'fixed inset-0 z-50 w-full h-full opacity-0 pointer-events-none hidden transition-opacity duration-300 ease-out bg-[#ffffff] overflow-hidden';
 
   overlayEl.innerHTML = `
-    <!-- Expanded Monitor Model Screen Frame Container -->
-    <div class="relative w-[95vw] max-w-[1400px] h-[88vh] max-h-[900px] rounded-2xl border-[10px] sm:border-[12px] border-[#1e293b] bg-[#ffffff] shadow-[0_25px_70px_-15px_rgba(0,0,0,0.9)] flex flex-col overflow-hidden ring-1 ring-slate-700/60">
-      <!-- Monitor Frame Top Bezel Bar -->
-      <div class="bg-[#0f172a] px-4 py-2 flex items-center justify-between shrink-0 select-none text-white border-b border-slate-800">
-        <div class="flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
-          <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
-          <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
-          <span class="text-xs font-mono text-slate-400 ml-2 hidden sm:inline">3D Monitor Model Screen Display • Creative Studio Showcase</span>
-        </div>
-        <button id="close-overlay-btn" class="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-          Exit 3D View (ESC)
-        </button>
-      </div>
-      
-      <!-- Full-Screen Interactive Showcase Page Container inside Monitor Border -->
-      <div id="overlay-portfolio-content" class="flex-1 w-full h-full overflow-hidden bg-[#ffffff] relative">
-        ${getPortfolioHTML()}
-      </div>
+    <!-- Floating Exit 3D View Button -->
+    <button id="close-overlay-btn" class="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-full bg-slate-900/90 hover:bg-slate-900 text-white shadow-xl backdrop-blur-md border border-slate-700/80 transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      Exit 3D View (ESC)
+    </button>
+
+    <!-- Full-Screen Interactive Showcase Loader -->
+    <div id="portfolio-expand-loader" class="absolute inset-0 z-40 bg-white flex flex-col items-center justify-center transition-opacity duration-300 ease-out opacity-100 pointer-events-auto select-none">
+      <style>
+        .loader {
+          width: 60px;
+          aspect-ratio: 2;
+          --_g: no-repeat radial-gradient(circle closest-side,#000 90%,#0000);
+          background: 
+            var(--_g) 0%   50%,
+            var(--_g) 50%  50%,
+            var(--_g) 100% 50%;
+          background-size: calc(100%/3) 50%;
+          animation: l3 1s infinite linear;
+        }
+        @keyframes l3 {
+            20%{background-position:0%   0%, 50%  50%,100%  50%}
+            40%{background-position:0% 100%, 50%   0%,100%  50%}
+            60%{background-position:0%  50%, 50% 100%,100%   0%}
+            80%{background-position:0%  50%, 50%  50%,100% 100%}
+        }
+      </style>
+      <div class="loader"></div>
+    </div>
+
+    <!-- Full-Screen Interactive Showcase Page Container -->
+    <div id="overlay-portfolio-content" class="w-full h-full overflow-hidden bg-[#ffffff] relative opacity-0 transition-opacity duration-300">
+      ${getPortfolioHTML()}
     </div>
   `;
 
@@ -286,19 +301,52 @@ function createInteractiveOverlay(containerEl) {
 
 function showInteractiveOverlay() {
   if (overlayEl) {
+    if (expandLoaderTimeout) {
+      clearTimeout(expandLoaderTimeout);
+      expandLoaderTimeout = null;
+    }
+
+    const loaderEl = overlayEl.querySelector('#portfolio-expand-loader');
     const contentEl = overlayEl.querySelector('#overlay-portfolio-content');
+
     if (contentEl) {
       contentEl.innerHTML = getPortfolioHTML();
       initPortfolioInteractivity(contentEl);
+      contentEl.classList.remove('opacity-100');
+      contentEl.classList.add('opacity-0');
     }
+
+    if (loaderEl) {
+      loaderEl.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+      loaderEl.classList.add('flex', 'opacity-100', 'pointer-events-auto');
+    }
+
     overlayEl.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
-    overlayEl.classList.add('flex', 'opacity-100', 'pointer-events-auto');
+    overlayEl.classList.add('block', 'opacity-100', 'pointer-events-auto');
+
+    expandLoaderTimeout = setTimeout(() => {
+      if (loaderEl) {
+        loaderEl.classList.remove('opacity-100', 'pointer-events-auto');
+        loaderEl.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+          loaderEl.classList.add('hidden');
+        }, 300);
+      }
+      if (contentEl) {
+        contentEl.classList.remove('opacity-0');
+        contentEl.classList.add('opacity-100');
+      }
+    }, 1000);
   }
 }
 
 function hideInteractiveOverlay() {
+  if (expandLoaderTimeout) {
+    clearTimeout(expandLoaderTimeout);
+    expandLoaderTimeout = null;
+  }
   if (overlayEl) {
-    overlayEl.classList.remove('flex', 'opacity-100', 'pointer-events-auto');
+    overlayEl.classList.remove('block', 'flex', 'opacity-100', 'pointer-events-auto');
     overlayEl.classList.add('hidden', 'opacity-0', 'pointer-events-none');
   }
 }
