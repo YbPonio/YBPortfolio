@@ -67,8 +67,8 @@ export function getPortfolioHTML() {
           display: flex; justify-content: flex-end; align-items: center;
         }
         @media (min-width: 768px) { .burger-wrapper { top: 16px; } }
-        .burger-wrapper .inner { padding-right: 20px; }
-        @media (min-width: 768px) { .burger-wrapper .inner { padding-right: 32px; } }
+        .burger-wrapper .inner { padding-right: 68px; }
+        @media (min-width: 768px) { .burger-wrapper .inner { padding-right: 84px; } }
 
         .burger-btn {
           width: 48px; height: 48px; border-radius: 50%; border: none; cursor: pointer;
@@ -269,16 +269,23 @@ export function getPortfolioHTML() {
   `;
 }
 
+let currentSpotlightCleanup = null;
+
 /**
  * Initialize Interactivity (Word reveal, Burger toggle, Spotlight mask) inside DOM element
  */
 export function initPortfolioInteractivity(rootEl) {
   if (!rootEl) return;
 
+  if (currentSpotlightCleanup) {
+    currentSpotlightCleanup();
+    currentSpotlightCleanup = null;
+  }
+
   // 1. Headline text (Instant display)
   const headline = rootEl.querySelector('#headline');
   if (headline && !headline.textContent) {
-    headline.textContent = "I build compelling visual stories & motion that make ideas shine.";
+    headline.textContent = "Please Hire me huhuhuhuhuhuh";
   }
 
 
@@ -349,10 +356,11 @@ export function initPortfolioInteractivity(rootEl) {
     }
     updateSpotlight();
 
-    return () => {
+    currentSpotlightCleanup = () => {
       rootEl.removeEventListener('mousemove', handleMouseMove);
       if (animId) cancelAnimationFrame(animId);
     };
+    return currentSpotlightCleanup;
   }
 }
 

@@ -220,6 +220,11 @@ export function init3DMonitorShowcase(containerEl) {
         monitorMeshGroup.rotation.set(0, 0, 0);
         isAnimatingTransition = false;
 
+        if (controls) {
+          controls.enableRotate = !isExpanded;
+          controls.update();
+        }
+
         // Reveal Portfolio HTML Showcase ONLY after expanding animation completes
         if (isExpanded) {
           showInteractiveOverlay();
@@ -244,10 +249,12 @@ function createInteractiveOverlay(containerEl) {
   overlayEl.className = 'fixed inset-0 z-50 w-full h-full opacity-0 pointer-events-none hidden transition-opacity duration-300 ease-out bg-[#ffffff] overflow-hidden';
 
   overlayEl.innerHTML = `
-    <!-- Floating Exit 3D View Button -->
-    <button id="close-overlay-btn" class="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-full bg-slate-900/90 hover:bg-slate-900 text-white shadow-xl backdrop-blur-md border border-slate-700/80 transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-      Exit 3D View (ESC)
+    <!-- Floating Exit 3D View Button (Minimalist X Button, No Text) -->
+    <button id="close-overlay-btn" aria-label="Exit 3D View" title="Exit 3D View (ESC)" class="fixed top-4 right-4 sm:top-5 sm:right-6 z-50 flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-900/85 hover:bg-slate-900 text-white shadow-xl backdrop-blur-md border border-slate-700/80 transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-400">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
     </button>
 
     <!-- Full-Screen Interactive Showcase Loader -->
@@ -346,8 +353,14 @@ function hideInteractiveOverlay() {
     expandLoaderTimeout = null;
   }
   if (overlayEl) {
-    overlayEl.classList.remove('block', 'flex', 'opacity-100', 'pointer-events-auto');
-    overlayEl.classList.add('hidden', 'opacity-0', 'pointer-events-none');
+    overlayEl.classList.remove('opacity-100', 'pointer-events-auto');
+    overlayEl.classList.add('opacity-0', 'pointer-events-none');
+    setTimeout(() => {
+      if (!isExpanded && overlayEl) {
+        overlayEl.classList.remove('block', 'flex');
+        overlayEl.classList.add('hidden');
+      }
+    }, 300);
   }
 }
 
@@ -607,7 +620,7 @@ function triggerScreenMeshExpansion() {
   startRot.copy(monitorMeshGroup.rotation);
 
   if (controls) {
-    controls.enableRotate = !isExpanded;
+    controls.enableRotate = false;
   }
 
   if (!isExpanded) {
