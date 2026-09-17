@@ -466,14 +466,14 @@ function drawFuturisticScreenTexture() {
   rttContext.fillStyle = '#000000';
   rttContext.font = '800 36px "Orbitron", sans-serif';
   rttContext.textAlign = 'center';
-  rttContext.fillText('BEYOND TRENDS', centerX, centerY - 20);
+  rttContext.fillText('YCKER PONIO', centerX, centerY - 20);
 
   rttContext.font = '500 14px "Plus Jakarta Sans", sans-serif';
   rttContext.fillStyle = '#4b5563';
   rttContext.fillText('ENGINEERED MINIMALISM • CYBER-TEX ARCHITECTURE', centerX, centerY + 12);
 
-  // 4. Center Action Button ("EXPAND SHOWCASE  ↗")
-  const btnW = 340;
+  // 4. Center Action Button ("CLICK HERE")
+  const btnW = 320;
   const btnH = 58;
   const btnX = centerX - btnW / 2;
   const btnY = centerY + 48;
@@ -485,15 +485,15 @@ function drawFuturisticScreenTexture() {
 
   // Button text
   rttContext.fillStyle = '#ffffff';
-  rttContext.font = '700 13px "Plus Jakarta Sans", sans-serif';
+  rttContext.font = '700 14px "Plus Jakarta Sans", sans-serif';
   rttContext.textAlign = 'center';
-  rttContext.fillText('EXPAND SHOWCASE  ↗', centerX, btnY + 34);
+  rttContext.fillText('CLICK HERE', centerX, btnY + 34);
 
   // Subtext hint
   rttContext.fillStyle = '#9ca3af';
   rttContext.font = '500 11px "Plus Jakarta Sans", sans-serif';
   rttContext.textAlign = 'center';
-  rttContext.fillText('CLICK SCREEN BUTTON TO EXPAND TO FULL EXPERIENCE', centerX, btnY + btnH + 30);
+  rttContext.fillText('CLICK HERE TO EXPAND TO FULL EXPERIENCE', centerX, btnY + btnH + 30);
 
   // 5. Bottom Footer Line
   rttContext.strokeStyle = '#e5e7eb';

@@ -33,11 +33,23 @@ export function getPortfolioHTML() {
         <rect width="100%" height="100%" fill="url(#hero-grid-pattern)"/>
       </svg>
 
-      <!-- Giant Creator Watermark in Background behind photo -->
-      <div class="absolute bottom-2 left-0 right-0 z-[1] pointer-events-none flex items-center justify-center overflow-hidden opacity-[0.08]">
-        <span class="font-orbitron font-black text-[clamp(4.5rem,15vw,22rem)] tracking-tighter leading-none select-none text-black">
-          YBPONIO
-        </span>
+      <!-- Giant Creator Watermark in Background behind photo (Running News Ticker) -->
+      <div class="absolute inset-0 z-[1] pointer-events-none flex items-center overflow-hidden opacity-[0.08]"
+           style="transform: translateY(-100px);">
+        <div class="animate-news-ticker flex whitespace-nowrap select-none">
+          <div class="font-orbitron font-black text-[clamp(8rem,26vw,36rem)] tracking-tight leading-none text-black flex items-center shrink-0">
+            <span>YBPONIO</span>
+            <span>YBPONIO</span>
+            <span>YBPONIO</span>
+            <span>YBPONIO</span>
+          </div>
+          <div class="font-orbitron font-black text-[clamp(8rem,26vw,36rem)] tracking-tight leading-none text-black flex items-center shrink-0" aria-hidden="true">
+            <span>YBPONIO</span>
+            <span>YBPONIO</span>
+            <span>YBPONIO</span>
+            <span>YBPONIO</span>
+          </div>
+        </div>
       </div>
 
       <!-- Developer Hero Portrait Layers (Base & Spotlight Reveal) -->
@@ -78,12 +90,10 @@ export function getPortfolioHTML() {
           <!-- Main Three-Line Headline in Orbitron -->
           <h1 class="font-orbitron font-extrabold uppercase text-black select-none tracking-[0.08em]"
               style="font-size: var(--headline); line-height: 1.05;">
-            <div>PLEASE HIRE ME</div>
-            <div>PLEEASSSEEE HUHU</div>
+            <div>HIRE ME</div>
+            <div>PLEASE HUHU</div>
             <div class="flex items-center flex-wrap">
               <span>IM BROKE</span>
-              <!-- Inline Checkerboard Grid SVG -->
-              ${Icons.Checkerboard()}
             </div>
           </h1>
 
@@ -93,38 +103,6 @@ export function getPortfolioHTML() {
           </div>
         </div>
 
-        <!-- Right Lower Feature Block (Self-End, Bottom-Aligned on Desktop) -->
-        <div class="mt-8 lg:mt-0 self-start lg:self-end pointer-events-auto">
-          <div class="relative flex flex-col gap-4 text-black bg-white/70 backdrop-blur-xs lg:bg-transparent"
-               style="min-width: var(--feature-min); padding: var(--feature-pad);">
-            
-            <!-- Corner Brackets (TL, TR, BL, BR) -->
-            <div class="absolute top-0 left-0 text-black pointer-events-none">
-              ${Icons.CornerTL('var(--corner)', 1.5)}
-            </div>
-            <div class="absolute top-0 right-0 text-black pointer-events-none">
-              ${Icons.CornerTR('var(--corner)', 1.5)}
-            </div>
-            <div class="absolute bottom-0 left-0 text-black pointer-events-none">
-              ${Icons.CornerBL('var(--corner)', 1.5)}
-            </div>
-            <div class="absolute bottom-0 right-0 text-black pointer-events-none">
-              ${Icons.CornerBR('var(--corner)', 1.5)}
-            </div>
-
-            <!-- Wireframe Globe SVG -->
-            <div class="text-black">
-              ${Icons.WireframeGlobe()}
-            </div>
-
-            <!-- Tagline in Plus Jakarta Sans Semibold Tracking 0.18em -->
-            <div class="font-jakarta font-semibold uppercase text-black tracking-[0.18em] leading-snug"
-                 style="font-size: var(--body);">
-              <div>BEYOND TRENDS.</div>
-              <div>BUILT FOR TOMORROW.</div>
-            </div>
-          </div>
-        </div>
       </main>
 
       <!-- Bottom Hint Bar -->

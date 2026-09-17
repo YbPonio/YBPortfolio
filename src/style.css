@@ -71,13 +71,16 @@
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: #ffffff;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
@@ -145,6 +148,7 @@
     opacity: 0;
     transform: translateY(-12px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -192,4 +196,31 @@
 
 .drawer-panel.active {
   transform: translateX(0);
+}
+
+/* =========================================================
+   NEWS TICKER / MARQUEE ANIMATION
+   Seamless infinite horizontal scroll for background watermark
+   ========================================================= */
+@keyframes newsTickerMarquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-news-ticker {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: newsTickerMarquee 100s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-news-ticker {
+    animation: none;
+  }
 }
