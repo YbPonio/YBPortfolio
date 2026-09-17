@@ -6,29 +6,17 @@ export default {
   ],
   theme: {
     extend: {
-      colors: {
-        dark: {
-          bg: '#0a0d14',
-          card: '#121722',
-          cardHover: '#1a202c',
-          border: '#1e293b'
-        },
-        accent: {
-          cyan: '#00f2fe',
-          blue: '#4facfe',
-          purple: '#7f00ff',
-          pink: '#e100ff',
-          emerald: '#10b981'
-        }
-      },
       fontFamily: {
-        mono: ['"Fira Code"', 'JetBrains Mono', 'monospace'],
-        sans: ['Inter', 'system-ui', 'sans-serif']
+        orbitron: ['Orbitron', 'sans-serif'],
+        jakarta: ['"Plus Jakarta Sans"', 'sans-serif'],
+        chakra: ['"Chakra Petch"', 'sans-serif'],
+        michroma: ['Michroma', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif']
       },
-      boxShadow: {
-        'glow-cyan': '0 0 20px rgba(0, 242, 254, 0.35)',
-        'glow-purple': '0 0 20px rgba(127, 0, 255, 0.35)',
-        'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+      colors: {
+        slate: {
+          grid: '#64748b'
+        }
       }
     },
   },

@@ -1,13 +1,13 @@
 /**
- * Vite Main Entry Point - 3D Monitor Showcase
- * Developer: Ycker Bandola Ponio (ybponio)
+ * Vite Main Entry Point — 3D Monitor Showcase & Interactive Portfolio
+ * Developer: Ycker Bandola Ponio (ybponio) / LGPSM
  */
 
-import '../src/style.css';
+import './style.css';
 import { init3DMonitorShowcase } from './js/monitor-3d.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-  console.log("🚀 Initializing Centered 3D Monitor Showcase for Ycker Bandola Ponio...");
+  console.log("🚀 Initializing LGPSM 3D Showcase & Portfolio for YBPONIO...");
 
   const container = document.getElementById('monitor-canvas-container');
   if (container) {
